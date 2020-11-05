@@ -1,14 +1,14 @@
 package com.thinktechnologies.controller;
 
-import com.cloudconvert.dto.Status;
-import com.cloudconvert.dto.response.JobResponse;
 import com.thinktechnologies.handler.cloudconvert.CloudConvertHandler;
-import com.thinktechnologies.handler.cloudconvert.exception.CloudConvertHandlerException;
+import com.thinktechnologies.handler.cloudconvert.Job;
 import com.thinktechnologies.handler.file.File;
 import com.thinktechnologies.handler.file.FileHandler;
 import com.thinktechnologies.logger.Logger;
 import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,68 +27,51 @@ public class FileConvertController
     @Autowired
     CloudConvertHandler cloudConvertHandler;
 
-    @GetMapping(value = "/api/v1/convert/sftp")
-    public void sftp(@RequestParam("directory") String workingDirectory,
-                     @RequestParam("currentExtension") String currentExtension,
-                     @RequestParam("desiredExtension") String desiredExtension) throws Exception
+    @GetMapping(value = "/api/v1/convert")
+    public ResponseEntity convertFiles(@RequestParam("directory") String workingDirectory,
+                             @RequestParam("currentExtension") String currentExtension,
+                             @RequestParam("desiredExtension") String desiredExtension) throws Exception
     {
         List<File> filenames = fileHandler.fetchFilenames(workingDirectory);
-        List<JobResponse> jobs = cloudConvertHandler.createConvertJobs(filenames, currentExtension, desiredExtension);
+        List<Job> jobs = cloudConvertHandler.createConvertJobs(filenames, currentExtension, desiredExtension);
 
         log.infof("Successfully started %d jobs.\n", jobs.size());
 
-        while (!allComplete(jobs))
+        int completedCount = 0;
+
+        while (completedCount < jobs.size())
         {
-            log.info("Checking jobs statuses.");
+            for (Job job : jobs)
+            {
+                job = cloudConvertHandler.checkStatus(job);
 
-            long waiting = countStatus(jobs, Status.WAITING);
-            long processing = countStatus(jobs, Status.PROCESSING);
-            long finished = countStatus(jobs, Status.FINISHED);
-            long error = countStatus(jobs, Status.ERROR);
+                log.infof("%s: %s", job.getFile().getName(), job.getStatus());
 
-            log.infof("Waiting - %d/%d", waiting, jobs.size());
-            log.infof("Processing - %d/%d", processing, jobs.size());
-            log.infof("Finished - %d/%d", finished, jobs.size());
-            log.infof("Error - %d/%d", error, jobs.size());
-            log.infof("Unknown - %d/%d", jobs.size() - (waiting + processing + finished + error), jobs.size());
+                if (job.isComplete())
+                {
+                    if (!job.isError())
+                        job.setExportedFile(fileHandler.download(
+                                cloudConvertHandler.getExportedFile(job.getExportTask()),
+                                new File(cloudConvertHandler.getExportedFileName(job.getExportTask())),
+                                job.getFile()
+                        ));
+                    completedCount++;
+                }
+            }
         }
 
-        log.infof("Finished all %d jobs.\n", jobs.size());
-        log.info("List of Errored Files: ");
-
-        for (JobResponse job : jobs)
-            if (job.getStatus().equals(Status.ERROR))
-                log.info(job.getTasks().get(0).getResult().getFiles().get(0).get("filename"));
+        return new ResponseEntity<>(buildReport(jobs), HttpStatus.OK);
     }
 
-    protected boolean allComplete(List<JobResponse> jobs)
+    protected String buildReport(List<Job> jobs)
     {
-        return jobs.stream().allMatch(job -> {
-            try
-            {
-                Status status = cloudConvertHandler.checkJobCompletion(job);
-                return Status.FINISHED.equals(status) || Status.ERROR.equals(status);
-            }
-            catch (CloudConvertHandlerException e)
-            {
-                return false;
-            }
-        });
-    }
+        StringBuilder sb = new StringBuilder();
 
-    protected long countStatus(List<JobResponse> jobs, Status status)
-    {
-        return jobs.stream().map(job -> {
-            try
-            {
-                Status s = cloudConvertHandler.checkJobCompletion(job);
+        sb.append("<h1>Conversion Report:</h1> <br>");
 
-                return s != null ? s.toString() : "UKNOWN";
-            }
-            catch (CloudConvertHandlerException e)
-            {
-                return "UNKNOWN";
-            }
-        }).filter(s -> s.equals(status.toString())).count();
+        for (Job job : jobs)
+            sb.append(String.format("%s: %s Saved as: %s <br>", job.getFile().getName(), job.getStatus(), job.getExportFile()));
+
+        return sb.toString();
     }
 }

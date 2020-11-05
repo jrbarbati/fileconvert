@@ -11,29 +11,23 @@ public class FileTest
     {
         File file = new File("filename.pages");
 
-        assertEquals("filename.pages", file.getFilename());
-        assertEquals("", file.getPath());
-        assertEquals("filename.pages", file.getFullName());
+        assertEquals("filename.pages", file.getName());
     }
 
     @Test
     public void file()
     {
-        File file = new File("filename.pages", "~/tmp/dir");
+        File file = new File("~/tmp/dir/filename.pages");
 
-        assertEquals("filename.pages", file.getFilename());
-        assertEquals("~/tmp/dir/", file.getPath());
-        assertEquals("~/tmp/dir/filename.pages", file.getFullName());
+        assertEquals("~/tmp/dir/filename.pages", file.getName());
     }
 
     @Test
     public void file_pathWithEndingSlash()
     {
-        File file = new File("filename.pages", "~/tmp/dir/");
+        File file = new File("~/tmp/dir/filename.pages");
 
-        assertEquals("filename.pages", file.getFilename());
-        assertEquals("~/tmp/dir/", file.getPath());
-        assertEquals("~/tmp/dir/filename.pages", file.getFullName());
+        assertEquals("~/tmp/dir/filename.pages", file.getName());
     }
 
     @Test

@@ -32,4 +32,4 @@ End: 5:41 pm
 Start: 10:00 am
 End: 11:30 am
 Start: 2:15 pm
-End:
+End: 6:00 pm

@@ -1,28 +1,12 @@
 package com.thinktechnologies.handler.file;
 
-import java.util.Objects;
-
 public class File
 {
-    private final String filename;
     private final String path;
-    private final Integer id;
 
-    public File(String filename)
+    public File(String path)
     {
-        this(filename, "");
-    }
-
-    public File(String filename, String path)
-    {
-        this.filename = filename;
-        this.path = path.endsWith("/") || path.isEmpty() ? path : path + "/";
-        this.id = Objects.hash(filename);
-    }
-
-    public String getFilename()
-    {
-        return filename;
+        this.path = path.endsWith("/") || path.isEmpty() ? path.substring(0, path.length() - 1) : path;
     }
 
     public String getPath()
@@ -30,22 +14,14 @@ public class File
         return path;
     }
 
-    public int getId()
-    {
-        return id;
-    }
-
     public String getExtension()
     {
-        String filename = getFilename();
+        String filename = getPath();
         return filename.substring(filename.indexOf('.') + 1);
     }
 
-    /**
-     * @return the path concatenated with the filename
-     */
-    public String getFullName()
+    public String getName()
     {
-        return path + filename;
+        return path;
     }
 }

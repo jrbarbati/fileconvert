@@ -1,114 +1,84 @@
 package com.thinktechnologies.handler.file;
 
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
-import com.thinktechnologies.handler.file.exception.SftpHandlerException;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Spy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
-
 
 @SpringBootTest
 @RunWith(SpringRunner.class)
 @ActiveProfiles("test")
 public class FileHandlerTest
 {
-    @Spy
     @Autowired
     FileHandler fileHandler;
-
-    private JSch mockJsch = mock(JSch.class);
 
     @Before
     public void setup()
     {
-        fileHandler.jsch = mockJsch;
+        fileHandler = spy(fileHandler);
     }
 
     @Test
-    public void handle() {}
-
-    @Test
-    public void openSftpConnection() throws Exception
+    public void fetchFileNames()
     {
-        Session mockSession = mock(Session.class);
-        ChannelSftp mockChannel = mock(ChannelSftp.class);
+        java.io.File workingDirectory = new java.io.File("path/to/directory");
 
-        when(mockJsch.getSession(any(), any(), eq(22))).thenReturn(mockSession);
-        when(mockSession.openChannel(any())).thenReturn(mockChannel);
+        doReturn(new ArrayList<>()).when(fileHandler).fetchAllFilenames(workingDirectory);
 
-        ChannelSftp channelSftp = fileHandler.openSftpConnection("SERVER", "USER", "PASS");
+        List<File> files = fileHandler.fetchFilenames("path/to/directory");
 
-        assertEquals(mockChannel, channelSftp);
-
-        verify(mockJsch, times(1)).getSession(any(), any(), eq(22));
-        verify(mockSession, times(1)).openChannel("sftp");
+        assertTrue(files.isEmpty());
     }
 
     @Test
-    public void openSftpConnection_exception() throws Exception
+    public void fetchAllFilenames()
     {
-        Session mockSession = mock(Session.class);
+        java.io.File f1 = mock(java.io.File.class);
+        when(f1.getName()).thenReturn("f1.numbers");
+        when(f1.getPath()).thenReturn("~/f1.numbers");
+        when(f1.isDirectory()).thenReturn(false);
 
-        when(mockJsch.getSession(any(), any(), eq(22))).thenThrow(new JSchException("ERROR"));
+        java.io.File f2 = mock(java.io.File.class);
+        when(f2.getName()).thenReturn("f2.pages");
+        when(f2.getPath()).thenReturn("~/f2.pages");
+        when(f2.isDirectory()).thenReturn(false);
 
-        try
-        {
-            fileHandler.openSftpConnection("SERVER", "USER", "PASS");
-        }
-        catch (Exception e)
-        {
-            assertTrue(e instanceof SftpHandlerException);
-            assertEquals("JSchException caught while opening SFTP connection to SERVER", e.getMessage());
-        }
+        java.io.File f3 = mock(java.io.File.class);
+        when(f3.getName()).thenReturn("f3.numbers");
+        when(f3.getPath()).thenReturn("~/f3.numbers");
+        when(f3.isDirectory()).thenReturn(false);
 
-        verify(mockJsch, times(1)).getSession(any(), any(), eq(22));
-        verify(mockSession, times(0)).openChannel("sftp");
-    }
+        java.io.File f4 = mock(java.io.File.class);
+        when(f4.getName()).thenReturn("f4.pages");
+        when(f4.getPath()).thenReturn("~/d1/f4.pages");
+        when(f4.isDirectory()).thenReturn(false);
 
-    @Test
-    public void fetchAllFilenames_emptyList() throws Exception
-    {
-        ChannelSftp mockChannel = mock(ChannelSftp.class);
+        java.io.File d1 = mock(java.io.File.class);
+        when(d1.getName()).thenReturn("~/d1");
+        when(d1.getPath()).thenReturn("~/");
+        when(d1.isDirectory()).thenReturn(true);
+        when(d1.listFiles()).thenReturn(new java.io.File[] {f4});
 
-        when(mockChannel.ls(any())).thenReturn(new Vector());
+        java.io.File home = mock(java.io.File.class);
+        when(home.listFiles()).thenReturn(new java.io.File[] {f1, f2, f3, d1});
 
-        List<File> filenames = fileHandler.fetchAllFilenames(mockChannel, "~/");
+        List<File> files = fileHandler.fetchAllFilenames(home);
 
-        assertNotNull(filenames);
-        assertTrue(filenames.isEmpty());
-    }
-
-    @Test
-    public void fetchAllFilenames() throws Exception
-    {
-        ChannelSftp mockChannel = mock(ChannelSftp.class);
-        ChannelSftp.LsEntry mockEntry = mock(ChannelSftp.LsEntry.class);
-
-        when(mockChannel.ls(any())).thenReturn(new Vector(Collections.singletonList(mockEntry)));
-        when(mockEntry.getFilename()).thenReturn("File1.txt");
-
-        List<File> filenames = fileHandler.fetchAllFilenames(mockChannel, "~/");
-
-        assertNotNull(filenames);
-        assertFalse(filenames.isEmpty());
-        assertEquals(1, filenames.size());
-        assertEquals("File1.txt", filenames.get(0).getFilename());
+        assertEquals(4, files.size());
+        assertEquals("~/f1.numbers", files.get(0).getName());
+        assertEquals("~/f2.pages", files.get(1).getName());
+        assertEquals("~/f3.numbers", files.get(2).getName());
+        assertEquals("~/d1/f4.pages", files.get(3).getName());
     }
 }

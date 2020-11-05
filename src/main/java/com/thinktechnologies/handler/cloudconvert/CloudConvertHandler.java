@@ -2,12 +2,10 @@ package com.thinktechnologies.handler.cloudconvert;
 
 import com.cloudconvert.client.CloudConvertClient;
 import com.cloudconvert.client.setttings.StringSettingsProvider;
-import com.cloudconvert.dto.Status;
-import com.cloudconvert.dto.request.*;
-import com.cloudconvert.dto.response.JobResponse;
+import com.cloudconvert.dto.request.ConvertFilesTaskRequest;
+import com.cloudconvert.dto.request.UploadImportRequest;
+import com.cloudconvert.dto.request.UrlExportRequest;
 import com.cloudconvert.dto.response.TaskResponse;
-import com.cloudconvert.dto.result.Result;
-import com.google.common.collect.ImmutableMap;
 import com.thinktechnologies.handler.cloudconvert.exception.CloudConvertHandlerException;
 import com.thinktechnologies.handler.file.File;
 import com.thinktechnologies.logger.Logger;
@@ -17,7 +15,7 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Component
 public class CloudConvertHandler
@@ -30,87 +28,71 @@ public class CloudConvertHandler
     @Value("${cloud-convert.use-sandbox}")
     private Boolean useSandbox;
 
-    @Value("${sftp-server.host}")
-    private String sfptHost;
-
-    @Value("${sftp-server.username}")
-    private String sftpUsername;
-
-    @Value("${sftp-server.password}")
-    private String sftpPassword;
-
     private CloudConvertClient cloudConvertClient;
 
-    public List<JobResponse> createConvertJobs(List<File> filenames, String inputFormat, String outputFormat) throws CloudConvertHandlerException
+    public List<Job> createConvertJobs(List<File> filenames, String inputFormat, String outputFormat) throws CloudConvertHandlerException
     {
         if (cloudConvertClient == null)
             cloudConvertClient = createClient();
 
-        List<JobResponse> createdJobs = new ArrayList<>();
+        List<Job> createdJobs = new ArrayList<>();
 
         for (File file : filenames)
         {
             if (!file.getExtension().equalsIgnoreCase(inputFormat))
                 continue;
 
-            String importTaskName = String.format("import-%s", file.getId());
-            String convertTaskName = String.format("convert-%s", file.getId());
-            String exportTaskName = String.format("export-%s", file.getId());
-
             try
             {
-                InputStream f = getClass().getClassLoader().getResourceAsStream(file.getFullName());
+                TaskResponse importTask = cloudConvertClient.importUsing().upload(new UploadImportRequest(), new java.io.File(file.getName())).getBody();
 
-                JobResponse createdJob = cloudConvertClient.jobs().create(
-                        ImmutableMap.of(
-                                importTaskName,
-                                new UploadImportRequest(),
-                                convertTaskName,
-                                new ConvertFilesTaskRequest()
-                                        .setInput(importTaskName)
-                                        .setInputFormat(inputFormat)
-                                        .setOutputFormat(outputFormat),
-                                exportTaskName,
-                                new UrlExportRequest()
-                                        .setInput(convertTaskName)
-                        )).getBody();
-
-                if (createdJob == null)
+                if (importTask == null)
                 {
-                    log.errorf("Error creating job for file: %s", file.getFullName());
+                    log.errorf("Failed to create import task for file: %s", file.getName());
                     continue;
                 }
 
-                TaskResponse importTask = createdJob.getTasks().stream().filter(task -> task.getName().equalsIgnoreCase(importTaskName)).collect(Collectors.toList()).get(0);
+                TaskResponse convertTask = cloudConvertClient.tasks().convert(
+                        new ConvertFilesTaskRequest()
+                                .setInput(importTask.getId())
+                                .setInputFormat(inputFormat)
+                                .setOutputFormat(outputFormat)
+                ).getBody();
 
-                Result<TaskResponse> upload = cloudConvertClient.importUsing().upload(new UploadImportRequest(), f);
+                if (convertTask == null)
+                {
+                    log.errorf("Failed to create convert task for file: %s", file.getName());
+                    continue;
+                }
 
-                createdJobs.add(createdJob);
+                TaskResponse exportTask = cloudConvertClient.exportUsing().url(new UrlExportRequest().setInput(convertTask.getId())).getBody();
+
+                if (exportTask == null)
+                {
+                    log.errorf("Failed to create export task for file: %s", file.getName());
+                }
+
+                createdJobs.add(new Job(file, importTask, convertTask, exportTask));
             }
             catch (Exception e)
             {
-                log.errorf("%s -- %s while creating job for file %s\n", this.getClass().getName(), e.getClass().getSimpleName(), file.getFullName());
+                log.errorf("%s -- %s while creating job for file %s\n", this.getClass().getName(), e.getClass().getSimpleName(), file.getName());
             }
         }
 
         return createdJobs;
     }
 
-    public Status checkJobCompletion(JobResponse job) throws CloudConvertHandlerException
+    public Job checkStatus(Job job) throws Exception
     {
         if (cloudConvertClient == null)
             cloudConvertClient = createClient();
 
-        try
-        {
-            JobResponse response = cloudConvertClient.jobs().show(job.getId()).getBody();
-            return response != null ? response.getStatus() : null;
-        }
-        catch (Exception e)
-        {
-            log.errorf("%s -- %s while getting status for job %s\n", this.getClass().getName(), e.getClass().getSimpleName(), job.getId());
-            return null;
-        }
+        job.setImportStatus(Objects.requireNonNull(cloudConvertClient.tasks().show(job.getImportTask().getId()).getBody()).getStatus());
+        job.setConvertStatus(Objects.requireNonNull(cloudConvertClient.tasks().show(job.getConvertTask().getId()).getBody()).getStatus());
+        job.setExportStatus(Objects.requireNonNull(cloudConvertClient.tasks().show(job.getExportTask().getId()).getBody()).getStatus());
+
+        return job;
     }
 
     protected CloudConvertClient createClient() throws CloudConvertHandlerException
@@ -123,5 +105,17 @@ public class CloudConvertHandler
         {
             throw new CloudConvertHandlerException("Error encountered while creating Cloud Convert Client. Cannot Proceed.", e);
         }
+    }
+
+    public InputStream getExportedFile(TaskResponse exportTask) throws Exception
+    {
+        exportTask = cloudConvertClient.tasks().show(exportTask.getId()).getBody();
+        return cloudConvertClient.files().download(exportTask.getResult().getFiles().get(0).get("url")).getBody();
+    }
+
+    public String getExportedFileName(TaskResponse exportTask) throws Exception
+    {
+        exportTask = cloudConvertClient.tasks().show(exportTask.getId()).getBody();
+        return exportTask.getResult().getFiles().get(0).get("filename");
     }
 }

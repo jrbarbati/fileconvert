@@ -1,10 +1,12 @@
 package com.thinktechnologies.handler.cloudconvert;
 
 import com.cloudconvert.client.CloudConvertClient;
-import com.cloudconvert.dto.Status;
-import com.cloudconvert.dto.response.JobResponse;
+import com.cloudconvert.dto.request.UploadImportRequest;
+import com.cloudconvert.dto.response.TaskResponse;
 import com.cloudconvert.dto.result.Result;
-import com.cloudconvert.resource.sync.JobsResource;
+import com.cloudconvert.resource.sync.ExportFilesResource;
+import com.cloudconvert.resource.sync.ImportFilesResource;
+import com.cloudconvert.resource.sync.TasksResource;
 import com.thinktechnologies.handler.cloudconvert.exception.CloudConvertHandlerException;
 import com.thinktechnologies.handler.file.File;
 import org.junit.Before;
@@ -15,12 +17,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -57,79 +59,30 @@ public class CloudConvertHandlerTest {
     public void createConvertJobs() throws Exception
     {
         CloudConvertClient mockCloudConvertClient = mock(CloudConvertClient.class);
-        JobsResource mockJobsResource = mock(JobsResource.class);
-        Result mockResult = mock(Result.class);
-        JobResponse mockJobResponse = mock(JobResponse.class);
+        ImportFilesResource mockImportFilesResource = mock(ImportFilesResource.class);
+        TasksResource mockTasksResource = mock(TasksResource.class);
+        ExportFilesResource mockExportFilesResource = mock(ExportFilesResource.class);
 
         doReturn(mockCloudConvertClient).when(cloudConvertHandler).createClient();
-        when(mockCloudConvertClient.jobs()).thenReturn(mockJobsResource);
-        when(mockJobsResource.create(any())).thenReturn(mockResult);
-        when(mockResult.getBody()).thenReturn(mockJobResponse);
 
-        when(mockJobResponse.getId()).thenReturn("1").thenReturn("2");
+        when(mockCloudConvertClient.importUsing()).thenReturn(mockImportFilesResource);
+        when(mockImportFilesResource.upload(any(UploadImportRequest.class), any(java.io.File.class))).thenReturn(Result.<TaskResponse>builder().body(new TaskResponse()).build());
+        when(mockCloudConvertClient.tasks()).thenReturn(mockTasksResource);
+        when(mockTasksResource.convert(any())).thenReturn(Result.<TaskResponse>builder().body(new TaskResponse()).build());
+        when(mockCloudConvertClient.exportUsing()).thenReturn(mockExportFilesResource);
+        when(mockExportFilesResource.url(any())).thenReturn(Result.<TaskResponse>builder().body(new TaskResponse()).build());
 
-        List<JobResponse> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx");
+        List<Job> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx");
 
-        assertEquals("1", jobs.get(0).getId());
-        assertEquals("2", jobs.get(1).getId());
-
-        verify(mockCloudConvertClient, times(2)).jobs();
-        verify(mockJobsResource, times(2)).create(any());
+        assertEquals("file1.pages", jobs.get(0).getFile().getName());
+        assertEquals("file2.pages", jobs.get(1).getFile().getName());
     }
 
     @Test
     public void createConvertJobs_failedToCreate() throws Exception
     {
-        CloudConvertClient mockCloudConvertClient = mock(CloudConvertClient.class);
-        JobsResource mockJobsResource = mock(JobsResource.class);
-
-        doReturn(mockCloudConvertClient).when(cloudConvertHandler).createClient();
-        when(mockCloudConvertClient.jobs()).thenReturn(mockJobsResource);
-        when(mockJobsResource.create(any())).thenThrow(new IOException());
-
-        List<JobResponse> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx");
+        List<Job> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx");
 
         assertTrue(jobs.isEmpty());
-
-        verify(mockCloudConvertClient, times(2)).jobs();
-        verify(mockJobsResource, times(2)).create(any());
-    }
-
-    @Test
-    public void checkJobCompletion() throws Exception
-    {
-        CloudConvertClient mockCloudConvertClient = mock(CloudConvertClient.class);
-        JobsResource mockJobsResource = mock(JobsResource.class);
-        Result mockResult = mock(Result.class);
-        JobResponse mockJobResponse = mock(JobResponse.class);
-
-        doReturn(mockCloudConvertClient).when(cloudConvertHandler).createClient();
-        when(mockCloudConvertClient.jobs()).thenReturn(mockJobsResource);
-        when(mockJobsResource.show(any())).thenReturn(mockResult);
-        when(mockResult.getBody()).thenReturn(mockJobResponse);
-        when(mockJobResponse.getId()).thenReturn("1");
-        when(mockJobResponse.getStatus()).thenReturn(Status.FINISHED);
-
-        Status status = cloudConvertHandler.checkJobCompletion(mockJobResponse);
-
-        assertNotNull(status);
-        assertEquals(Status.FINISHED, status);
-    }
-
-    @Test
-    public void checkJobCompletion_error() throws Exception
-    {
-        CloudConvertClient mockCloudConvertClient = mock(CloudConvertClient.class);
-        JobsResource mockJobsResource = mock(JobsResource.class);
-        JobResponse mockJobResponse = mock(JobResponse.class);
-
-        doReturn(mockCloudConvertClient).when(cloudConvertHandler).createClient();
-        when(mockCloudConvertClient.jobs()).thenReturn(mockJobsResource);
-        when(mockJobsResource.show(any())).thenThrow(new IOException());
-        when(mockJobResponse.getId()).thenReturn("1");
-
-        Status status = cloudConvertHandler.checkJobCompletion(mockJobResponse);
-
-        assertNull(status);
     }
 }

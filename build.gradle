@@ -29,7 +29,7 @@ dependencies {
 	compile('io.springfox:springfox-swagger-ui:3.0.0')
 
 	compile group: 'com.cloudconvert', name: 'cloudconvert-java', version: '1.0.1'
-	compile group: 'com.jcraft', name: 'jsch', version: '0.1.55'
+	compile group: 'commons-io', name: 'commons-io', version: '2.4'
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }
