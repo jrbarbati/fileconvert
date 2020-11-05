@@ -1,0 +1,35 @@
+8/13
+Start: 10:30 am
+End: 11:15 am 
+Start: 2:15 pm
+End: 3:00 pm
+
+8/14
+Start: 10:45 am
+End: 12:00 pm
+
+8/17
+Start: 10:00 am
+End: 12:00 pm
+
+8/31
+Start: 12:30 pm
+End: 1:00 pm
+Start: 1:30 pm
+End: 3:00 pm
+
+9/1
+Start: 10:30 am
+End: 11:00 am
+Start: 12:45 pm
+End: 2:15 pm
+
+10/29
+Start: 3:00 pm
+End: 5:41 pm
+
+11/05
+Start: 10:00 am
+End: 11:30 am
+Start: 2:15 pm
+End:
