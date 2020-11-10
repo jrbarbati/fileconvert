@@ -1,3 +1,8 @@
 cloud-convert:
   use-sandbox: true
   api-key: 'API_KEY'
+
+sftp-server:
+  host: 'HOST'
+  username: 'USERNAME'
+  password: 'PASSWORD'

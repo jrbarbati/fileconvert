@@ -4,6 +4,7 @@ import com.thinktechnologies.handler.cloudconvert.CloudConvertHandler;
 import com.thinktechnologies.handler.cloudconvert.Job;
 import com.thinktechnologies.handler.file.File;
 import com.thinktechnologies.handler.file.FileHandler;
+import com.thinktechnologies.handler.sftp.SftpHandler;
 import com.thinktechnologies.logger.Logger;
 import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,18 +23,22 @@ public class FileConvertController
     private static final Logger log = new Logger(FileConvertController.class);
 
     @Autowired
+    SftpHandler sftpHandler;
+
+    @Autowired
     FileHandler fileHandler;
 
     @Autowired
     CloudConvertHandler cloudConvertHandler;
 
     @GetMapping(value = "/api/v1/convert")
-    public ResponseEntity convertFiles(@RequestParam("directory") String workingDirectory,
-                             @RequestParam("currentExtension") String currentExtension,
-                             @RequestParam("desiredExtension") String desiredExtension) throws Exception
+    public ResponseEntity convertFiles(@RequestParam("sourceDirectory") String sourceDirectory,
+                                       @RequestParam("targetDirectory") String targetDirectory,
+                                       @RequestParam("currentExtension") String currentExtension,
+                                       @RequestParam("desiredExtension") String desiredExtension) throws Exception
     {
-        List<File> filenames = fileHandler.fetchFilenames(workingDirectory);
-        List<Job> jobs = cloudConvertHandler.createConvertJobs(filenames, currentExtension, desiredExtension);
+        List<File> filenames = fileHandler.fetchFilenames(sourceDirectory);
+        List<Job> jobs = cloudConvertHandler.createConvertJobs(filenames, currentExtension, desiredExtension, targetDirectory);
 
         log.infof("Successfully started %d jobs.\n", jobs.size());
 
@@ -50,8 +55,9 @@ public class FileConvertController
                 if (job.isComplete())
                 {
                     if (!job.isError())
-                        job.setExportedFile(fileHandler.download(
+                        job.setExportedFile(sftpHandler.download(
                                 cloudConvertHandler.getExportedFile(job.getExportTask()),
+                                targetDirectory,
                                 new File(cloudConvertHandler.getExportedFileName(job.getExportTask())),
                                 job.getFile()
                         ));

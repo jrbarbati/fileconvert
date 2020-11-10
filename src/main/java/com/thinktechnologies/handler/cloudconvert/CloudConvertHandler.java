@@ -8,7 +8,9 @@ import com.cloudconvert.dto.request.UrlExportRequest;
 import com.cloudconvert.dto.response.TaskResponse;
 import com.thinktechnologies.handler.cloudconvert.exception.CloudConvertHandlerException;
 import com.thinktechnologies.handler.file.File;
+import com.thinktechnologies.handler.sftp.SftpHandler;
 import com.thinktechnologies.logger.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,9 +30,12 @@ public class CloudConvertHandler
     @Value("${cloud-convert.use-sandbox}")
     private Boolean useSandbox;
 
+    @Autowired
+    SftpHandler sftpHandler;
+
     private CloudConvertClient cloudConvertClient;
 
-    public List<Job> createConvertJobs(List<File> filenames, String inputFormat, String outputFormat) throws CloudConvertHandlerException
+    public List<Job> createConvertJobs(List<File> filenames, String inputFormat, String outputFormat, String targetDirectory) throws Exception
     {
         if (cloudConvertClient == null)
             cloudConvertClient = createClient();
@@ -39,7 +44,7 @@ public class CloudConvertHandler
 
         for (File file : filenames)
         {
-            if (!file.getExtension().equalsIgnoreCase(inputFormat))
+            if (!shouldConvertFile(file, inputFormat, outputFormat, targetDirectory))
                 continue;
 
             try
@@ -117,5 +122,10 @@ public class CloudConvertHandler
     {
         exportTask = cloudConvertClient.tasks().show(exportTask.getId()).getBody();
         return exportTask.getResult().getFiles().get(0).get("filename");
+    }
+
+    protected boolean shouldConvertFile(File file, String inputFormat, String outputFormat, String targetDirectory) throws Exception
+    {
+        return !file.getExtension().equalsIgnoreCase(inputFormat) && !sftpHandler.doesFileExist(file.getName().replace(inputFormat, outputFormat), targetDirectory);
     }
 }

@@ -33,3 +33,7 @@ Start: 10:00 am
 End: 11:30 am
 Start: 2:15 pm
 End: 6:00 pm
+
+11/10
+Start: 1:00 pm
+End: 4:00 pm

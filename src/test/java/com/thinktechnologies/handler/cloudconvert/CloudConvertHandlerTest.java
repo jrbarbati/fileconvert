@@ -46,7 +46,7 @@ public class CloudConvertHandlerTest {
 
         try
         {
-            cloudConvertHandler.createConvertJobs(new ArrayList<>(), "pages", "docx");
+            cloudConvertHandler.createConvertJobs(new ArrayList<>(), "pages", "docx", "~/");
         }
         catch (Exception e)
         {
@@ -64,6 +64,7 @@ public class CloudConvertHandlerTest {
         ExportFilesResource mockExportFilesResource = mock(ExportFilesResource.class);
 
         doReturn(mockCloudConvertClient).when(cloudConvertHandler).createClient();
+        doReturn(true).when(cloudConvertHandler).shouldConvertFile(any(), any(), any(), any());
 
         when(mockCloudConvertClient.importUsing()).thenReturn(mockImportFilesResource);
         when(mockImportFilesResource.upload(any(UploadImportRequest.class), any(java.io.File.class))).thenReturn(Result.<TaskResponse>builder().body(new TaskResponse()).build());
@@ -72,7 +73,7 @@ public class CloudConvertHandlerTest {
         when(mockCloudConvertClient.exportUsing()).thenReturn(mockExportFilesResource);
         when(mockExportFilesResource.url(any())).thenReturn(Result.<TaskResponse>builder().body(new TaskResponse()).build());
 
-        List<Job> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx");
+        List<Job> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx", "~/");
 
         assertEquals("file1.pages", jobs.get(0).getFile().getName());
         assertEquals("file2.pages", jobs.get(1).getFile().getName());
@@ -81,7 +82,7 @@ public class CloudConvertHandlerTest {
     @Test
     public void createConvertJobs_failedToCreate() throws Exception
     {
-        List<Job> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx");
+        List<Job> jobs = cloudConvertHandler.createConvertJobs(Arrays.asList(new File("file1.pages"), new File("file2.pages")), "pages", "docx", "~/");
 
         assertTrue(jobs.isEmpty());
     }

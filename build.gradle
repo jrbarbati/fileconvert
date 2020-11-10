@@ -30,6 +30,7 @@ dependencies {
 
 	compile group: 'com.cloudconvert', name: 'cloudconvert-java', version: '1.0.1'
 	compile group: 'commons-io', name: 'commons-io', version: '2.4'
+	compile group: 'com.jcraft', name: 'jsch', version: '0.1.55'
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }
