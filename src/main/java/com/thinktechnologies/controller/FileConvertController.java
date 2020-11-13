@@ -29,8 +29,8 @@ public class FileConvertController
 
     @GetMapping(value = "/api/v1/convert")
     public ResponseEntity convertFiles(@RequestParam("directory") String workingDirectory,
-                             @RequestParam("currentExtension") String currentExtension,
-                             @RequestParam("desiredExtension") String desiredExtension) throws Exception
+                                       @RequestParam("currentExtension") String currentExtension,
+                                       @RequestParam("desiredExtension") String desiredExtension) throws Exception
     {
         List<File> filenames = fileHandler.fetchFilenames(workingDirectory);
         List<Job> jobs = cloudConvertHandler.createConvertJobs(filenames, currentExtension, desiredExtension);

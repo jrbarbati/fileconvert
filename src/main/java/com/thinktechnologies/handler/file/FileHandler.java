@@ -1,7 +1,5 @@
 package com.thinktechnologies.handler.file;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.tika.io.IOUtils;
 import org.springframework.stereotype.Component;
 
 import java.io.FileOutputStream;
