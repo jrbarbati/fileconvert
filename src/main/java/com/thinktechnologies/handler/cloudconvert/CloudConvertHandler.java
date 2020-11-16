@@ -39,9 +39,6 @@ public class CloudConvertHandler
 
         for (File file : filenames)
         {
-            if (!file.getExtension().equalsIgnoreCase(inputFormat))
-                continue;
-
             try
             {
                 TaskResponse importTask = cloudConvertClient.importUsing().upload(new UploadImportRequest(), new java.io.File(file.getName())).getBody();
