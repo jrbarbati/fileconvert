@@ -4,6 +4,7 @@ import com.thinktechnologies.handler.cloudconvert.CloudConvertHandler;
 import com.thinktechnologies.handler.cloudconvert.Job;
 import com.thinktechnologies.handler.file.File;
 import com.thinktechnologies.handler.file.FileHandler;
+import com.thinktechnologies.handler.file.FileType;
 import com.thinktechnologies.logger.Logger;
 import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,9 +14,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.xml.ws.Response;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+
+import static com.thinktechnologies.handler.file.FileType.findTypeForExtension;
 
 @Api
 @RestController
@@ -34,6 +39,12 @@ public class FileConvertController
                                        @RequestParam("currentExtension") String currentExtension,
                                        @RequestParam("desiredExtension") String desiredExtension) throws Exception
     {
+        if (findTypeForExtension(currentExtension) == null || findTypeForExtension(desiredExtension) == null)
+            return new ResponseEntity<>(
+                    String.format("One of the provided extensions is not supported. Supported extensions: %s", FileType.allExtensions()),
+                    HttpStatus.BAD_REQUEST
+            );
+
         log.info("Fetching all filenames under given directory recursively.");
         List<File> filenames = fileHandler.fetchFilenames(workingDirectory, currentExtension, desiredExtension);
 

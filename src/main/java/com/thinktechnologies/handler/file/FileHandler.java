@@ -1,5 +1,6 @@
 package com.thinktechnologies.handler.file;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.io.FileOutputStream;
@@ -12,15 +13,6 @@ import java.util.stream.Stream;
 @Component
 public class FileHandler
 {
-    private final static Map<FileType, FileType> FILE_TYPE_PAIRS = new HashMap<FileType, FileType>() {{
-       put(FileType.PAGES, FileType.DOCX);
-       put(FileType.DOCX, FileType.PAGES);
-       put(FileType.NUMBERS, FileType.XLSX);
-       put(FileType.XLSX, FileType.NUMBERS);
-       put(FileType.KEYNOTE, FileType.PPTX);
-       put(FileType.PPTX, FileType.KEYNOTE);
-    }};
-
     private final static String DOT_REGEX = "\\.";
 
     public List<File> fetchFilenames(String workingDirectory, String currentExtension, String desiredExtension)
@@ -31,7 +23,7 @@ public class FileHandler
     protected List<File> fetchAllFilenames(java.io.File workingDirectory, String currentExtension, String desiredExtension)
     {
         List<File> files = new ArrayList<>();
-        Map<String, FilePair> filenamePairs = buildFilePairs(workingDirectory);
+        Map<String, FilePair> filenamePairs = buildFilePairs(workingDirectory, currentExtension, desiredExtension);
 
         for (java.io.File f : workingDirectory.listFiles())
         {
@@ -42,11 +34,9 @@ public class FileHandler
             }
 
             String[] splitFilename = f.getName().split(DOT_REGEX);
-
-            String filenameWithoutExtension = splitFilename[0];
             String extension = splitFilename.length > 1 ? splitFilename[1] : null;
 
-            if (filenamePairs.get(filenameWithoutExtension) != null && filenamePairs.get(filenameWithoutExtension).isCompletePair())
+            if (filenamePairs.get(f.getName()) != null && filenamePairs.get(f.getName()).isCompletePair())
                 continue;
 
             if (!currentExtension.equalsIgnoreCase(extension) || desiredExtension.equalsIgnoreCase(extension))
@@ -72,19 +62,47 @@ public class FileHandler
         return outputFilename;
     }
 
-    protected Map<String, FilePair> buildFilePairs(java.io.File workingDirectory)
+    protected Map<String, FilePair> buildFilePairs(java.io.File workingDirectory, String currentExtension, String desiredExtension)
     {
         Map<String, FilePair> pairs = new HashMap<>();
-        Stream<java.io.File> fileStream = Arrays.stream(workingDirectory.listFiles());
 
-        Set<String> filenames = fileStream.map(java.io.File::getName).collect(Collectors.toSet());
-        Iterator<java.io.File> fileIterator = fileStream.iterator();
+        FileType macFileType = FileType.findTypeForExtension(currentExtension);
+        FileType windowsFileType = FileType.findTypeForExtension(desiredExtension);
 
-        while(fileIterator.hasNext())
-        {
-            String filename = fileIterator.next().getName();
-        }
+        List<String> macFiles = getFilenamesAsStream(workingDirectory, macFileType).collect(Collectors.toList());
+        Set<String> windowsFiles = getFilenamesAsStream(workingDirectory, windowsFileType).collect(Collectors.toSet());
+
+        for (String macFilename : macFiles)
+            if (windowsFiles.contains(macFilename))
+                pairs.put(
+                        macFilename + "." + macFileType.getExtensions().stream().findFirst().orElse(""),
+                        new FilePair(
+                                macFilename + "." + macFileType.getExtensions().stream().findFirst().orElse(""),
+                                macFilename + "." + windowsFileType.getExtensions().stream().findFirst().orElse("")
+                        )
+                );
+            else
+                pairs.put(
+                        macFilename + "." + macFileType.getExtensions().stream().findFirst().orElse(""),
+                        new FilePair(
+                                macFilename + "." + macFileType.getExtensions().stream().findFirst().orElse(""),
+                                null
+                        )
+                );
 
         return pairs;
+    }
+
+    @NotNull
+    private Stream<String> getFilenamesAsStream(java.io.File workingDirectory, FileType fileType)
+    {
+        java.io.File[] files = workingDirectory.listFiles();
+        return Arrays.stream(files).map(java.io.File::getName).filter(file -> {
+            String[] split = file.split(DOT_REGEX);
+            if (split.length <= 1)
+                return false;
+
+            return fileType.getExtensions().contains(split[1]);
+        }).map(filename -> filename.split(DOT_REGEX)[0]);
     }
 }

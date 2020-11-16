@@ -3,29 +3,12 @@ package com.thinktechnologies.handler.file;
 public class FilePair
 {
     String macFilename;
-    FileType macFileType;
-
     String windowsFilename;
-    FileType windowsFileType;
 
-    public String getMacFilename()
+    public FilePair(String macFilename, String windowsFilename)
     {
-        return macFilename;
-    }
-
-    public FileType getMacFileType()
-    {
-        return macFileType;
-    }
-
-    public String getWindowsFilename()
-    {
-        return windowsFilename;
-    }
-
-    public FileType getWindowsFileType()
-    {
-        return windowsFileType;
+        this.macFilename = macFilename == null ? "" : macFilename;
+        this.windowsFilename = windowsFilename == null ? "" : windowsFilename;
     }
 
     public boolean isCompletePair()
