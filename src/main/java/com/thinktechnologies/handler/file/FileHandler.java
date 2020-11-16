@@ -7,10 +7,20 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class FileHandler
 {
+    private final static Map<FileType, FileType> FILE_TYPE_PAIRS = new HashMap<FileType, FileType>() {{
+       put(FileType.PAGES, FileType.DOCX);
+       put(FileType.DOCX, FileType.PAGES);
+       put(FileType.NUMBERS, FileType.XLSX);
+       put(FileType.XLSX, FileType.NUMBERS);
+       put(FileType.KEYNOTE, FileType.PPTX);
+       put(FileType.PPTX, FileType.KEYNOTE);
+    }};
+
     private final static String DOT_REGEX = "\\.";
 
     public List<File> fetchFilenames(String workingDirectory, String currentExtension, String desiredExtension)
@@ -21,7 +31,7 @@ public class FileHandler
     protected List<File> fetchAllFilenames(java.io.File workingDirectory, String currentExtension, String desiredExtension)
     {
         List<File> files = new ArrayList<>();
-        Map<String, Long> filenameCounts = countFilenames(workingDirectory);
+        Map<String, FilePair> filenamePairs = buildFilePairs(workingDirectory);
 
         for (java.io.File f : workingDirectory.listFiles())
         {
@@ -36,7 +46,7 @@ public class FileHandler
             String filenameWithoutExtension = splitFilename[0];
             String extension = splitFilename.length > 1 ? splitFilename[1] : null;
 
-            if (filenameCounts.get(filenameWithoutExtension) != null && filenameCounts.get(filenameWithoutExtension) > 1)
+            if (filenamePairs.get(filenameWithoutExtension) != null && filenamePairs.get(filenameWithoutExtension).isCompletePair())
                 continue;
 
             if (!currentExtension.equalsIgnoreCase(extension) || desiredExtension.equalsIgnoreCase(extension))
@@ -62,8 +72,19 @@ public class FileHandler
         return outputFilename;
     }
 
-    protected Map<String, Long> countFilenames(java.io.File workingDirectory)
+    protected Map<String, FilePair> buildFilePairs(java.io.File workingDirectory)
     {
-        return Arrays.stream(workingDirectory.listFiles()).map(file -> file.getName().split(DOT_REGEX)[0]).collect(Collectors.groupingBy(f -> f, Collectors.counting()));
+        Map<String, FilePair> pairs = new HashMap<>();
+        Stream<java.io.File> fileStream = Arrays.stream(workingDirectory.listFiles());
+
+        Set<String> filenames = fileStream.map(java.io.File::getName).collect(Collectors.toSet());
+        Iterator<java.io.File> fileIterator = fileStream.iterator();
+
+        while(fileIterator.hasNext())
+        {
+            String filename = fileIterator.next().getName();
+        }
+
+        return pairs;
     }
 }
