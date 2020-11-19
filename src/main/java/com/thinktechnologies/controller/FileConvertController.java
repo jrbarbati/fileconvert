@@ -6,7 +6,6 @@ import com.thinktechnologies.handler.file.File;
 import com.thinktechnologies.handler.file.FileHandler;
 import com.thinktechnologies.handler.file.FileType;
 import com.thinktechnologies.logger.Logger;
-import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +19,6 @@ import java.util.List;
 
 import static com.thinktechnologies.handler.file.FileType.findTypeForExtension;
 
-@Api
 @RestController
 public class FileConvertController
 {
@@ -89,7 +87,7 @@ public class FileConvertController
         sb.append("<h1>Conversion Report:</h1> <br>");
 
         for (Job job : jobs)
-            sb.append(String.format("%s: %s Saved as: %s <br><br>", job.getFile().getName(), job.getStatus(), job.getExportFile() != null ? job.getExportFile() : "ERROR during conversion or saving"));
+            sb.append(String.format("%s: %s Saved as: %s <br><br>", job.getFile().getName(), job.getStatus(), job.getExportFile() != null ? job.getExportFile() : "ERROR during conversion or saving of file."));
 
         return sb.toString();
     }

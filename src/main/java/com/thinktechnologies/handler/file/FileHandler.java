@@ -17,10 +17,10 @@ public class FileHandler
 
     public List<File> fetchFilenames(String workingDirectory, String currentExtension, String desiredExtension)
     {
-        return fetchAllFilenames(new java.io.File(workingDirectory), currentExtension, desiredExtension);
+        return fetchFilenames(new java.io.File(workingDirectory), currentExtension, desiredExtension);
     }
 
-    protected List<File> fetchAllFilenames(java.io.File workingDirectory, String currentExtension, String desiredExtension)
+    protected List<File> fetchFilenames(java.io.File workingDirectory, String currentExtension, String desiredExtension)
     {
         List<File> files = new ArrayList<>();
         Map<String, FilePair> filenamePairs = buildFilePairs(workingDirectory, currentExtension, desiredExtension);
@@ -29,7 +29,7 @@ public class FileHandler
         {
             if (f.isDirectory())
             {
-                files.addAll(fetchAllFilenames(f, currentExtension, desiredExtension));
+                files.addAll(fetchFilenames(f, currentExtension, desiredExtension));
                 continue;
             }
 

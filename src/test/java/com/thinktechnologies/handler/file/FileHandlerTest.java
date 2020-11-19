@@ -34,7 +34,7 @@ public class FileHandlerTest
     {
         java.io.File workingDirectory = new java.io.File("path/to/directory");
 
-        doReturn(new ArrayList<>()).when(fileHandler).fetchAllFilenames(workingDirectory, "pages", "docx");
+        doReturn(new ArrayList<>()).when(fileHandler).fetchFilenames(workingDirectory, "pages", "docx");
 
         List<File> files = fileHandler.fetchFilenames("path/to/directory", "pages", "docx");
 
@@ -83,7 +83,7 @@ public class FileHandlerTest
         java.io.File home = mock(java.io.File.class);
         when(home.listFiles()).thenReturn(new java.io.File[] {f1, f2, f3, f5excel, f5numbers, d1});
 
-        List<File> files = fileHandler.fetchAllFilenames(home, "numbers", "xlsx");
+        List<File> files = fileHandler.fetchFilenames(home, "numbers", "xlsx");
 
         assertEquals(4, files.size());
         assertEquals("~/f1.numbers", files.get(0).getName());
